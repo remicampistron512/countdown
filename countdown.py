@@ -83,26 +83,27 @@ def solve_countdown(drawn_numbers, target_number):
     :param target_number:
     :return:
     """
+
+
+
     #la solution est dans les chiffres proposés
     if target_number in drawn_numbers:
         return target_number
+    else:
+
+        tested_pairs= dict(operation=str,pair=tuple)
+        drawn_numbers_list = list()
+        calculate_multiplication(0,drawn_numbers)
 
 
-    tested_pairs= dict(operation=str,pair=tuple)
-    drawn_numbers_list = []
-
+def calculate_multiplication(left_shift,drawn_numbers):
     for i, number in enumerate(drawn_numbers):
-        updated_drawn_numbers = copy.deepcopy(drawn_numbers)
-        print(updated_drawn_numbers)
         for k, number2 in enumerate(drawn_numbers):
-            if k<len(drawn_numbers)-1:
-                updated_drawn_numbers2 = copy.deepcopy(updated_drawn_numbers)
-                print (f"{drawn_numbers[i]} x {drawn_numbers[k+1]} = {number * drawn_numbers[k+1]}")
-                updated_drawn_numbers2.remove(updated_drawn_numbers[i])
-                updated_drawn_numbers2.remove(updated_drawn_numbers[k + 1])
-                print ("updated drawn numbers")
-                print (updated_drawn_numbers2)
-        return None
+            if k < len(drawn_numbers) - 1:
+                print(f"{drawn_numbers[i + left_shift]} x {drawn_numbers[k + 1]} = {number * drawn_numbers[k + 1]}")
+                if k == len(drawn_numbers):
+                    calculate_multiplication(i,drawn_numbers)
+
 
 
 def start_game(solve=False):
