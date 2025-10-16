@@ -3,6 +3,7 @@
 
 import random
 import operator as op
+import copy
 
 #La liste des nombres disponibles
 NUMBERS_POOL = tuple(range(1, 11)) * 2 + (25, 50, 75, 100)
@@ -73,20 +74,58 @@ def ask_to_continue(prompt):
         print("merci d'entrer un terme valide (proposer | continuer)")
 
 
-def start_game():
+def solve_countdown(drawn_numbers, target_number):
+    """
+    Solveur du jeu automatique, basé sur dfs(depth first search).
+    On enregistre les combinaisons explorées dans un dictionnaire.
+
+    :param drawn_numbers:
+    :param target_number:
+    :return:
+    """
+    #la solution est dans les chiffres proposés
+    if target_number in drawn_numbers:
+        return target_number
+
+
+    tested_pairs= dict(operation=str,pair=tuple)
+    drawn_numbers_list = []
+
+    for i, number in enumerate(drawn_numbers):
+        updated_drawn_numbers = copy.deepcopy(drawn_numbers)
+        print(updated_drawn_numbers)
+        for k, number2 in enumerate(drawn_numbers):
+            if k<len(drawn_numbers)-1:
+                updated_drawn_numbers2 = copy.deepcopy(updated_drawn_numbers)
+                print (f"{drawn_numbers[i]} x {drawn_numbers[k+1]} = {number * drawn_numbers[k+1]}")
+                updated_drawn_numbers2.remove(updated_drawn_numbers[i])
+                updated_drawn_numbers2.remove(updated_drawn_numbers[k + 1])
+                print ("updated drawn numbers")
+                print (updated_drawn_numbers2)
+        return None
+
+
+def start_game(solve=False):
     """
     Démarre la partie, initialise les nombres utilisables ainsi que le nombre cible, puis les affiche.
     Lance alors une boucle infinie pour accomplir chaque tour de jeu
     :return:
     """
+
     drawn_numbers = random.choices(NUMBERS_POOL,k=6)
     target_number = random.randrange(101, 999)
-    display_numbers(target_number, drawn_numbers,True)
-    while len(drawn_numbers)>0:
-        results = next_turn(drawn_numbers, target_number)
-        if target_number in results:
-            print ("le compte est bon")
-        ask_to_continue("Voulez vous \"continuer\" ou \"proposer\" un nombre")
+    display_numbers(target_number, drawn_numbers, True)
+    if not solve:
+        while len(drawn_numbers)>0:
+            results = next_turn(drawn_numbers, target_number)
+            if target_number in results:
+                print ("le compte est bon")
+                break
+            if not ask_to_continue("Voulez vous \"continuer\" ou \"proposer\" un nombre"):
+                proposed_number = ask_number("proposer un nombre de la liste",results)
+                break
+    else:
+        solve_countdown(drawn_numbers,target_number)
 
 
 
@@ -127,4 +166,4 @@ def ask_number(prompt, drawn_numbers):
 
 
 if __name__ == '__main__':
-    start_game()
+    start_game(True)
