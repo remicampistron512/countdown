@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-NUMBERS_POOL = tuple(range(1, 11)) * 2 + (25, 50, 75, 100)
+
 import random
 import operator as op
 
+#La liste des nombres disponibles
+NUMBERS_POOL = tuple(range(1, 11)) * 2 + (25, 50, 75, 100)
+
+#Un dictionnaire des opérateurs et leur correspondance
 OPERATORS = {
     '+': op.add,
     '-': op.sub,
@@ -58,6 +62,17 @@ def calculate_and_print(a, b, sign):
     except ZeroDivisionError:
         print("Error: division by zero")
 
+
+def ask_to_continue(prompt):
+    while True:
+        decision = input(prompt)
+        if decision == "continuer" or decision == "c":
+            return True
+        elif decision == "proposer" or decision == "p":
+            return False
+        print("merci d'entrer un terme valide (proposer | continuer)")
+
+
 def start_game():
     """
     Démarre la partie, initialise les nombres utilisables ainsi que le nombre cible, puis les affiche.
@@ -65,28 +80,32 @@ def start_game():
     :return:
     """
     drawn_numbers = random.choices(NUMBERS_POOL,k=6)
-    initial_number = random.randrange(101, 999)
-    display_numbers(initial_number, drawn_numbers,True)
+    target_number = random.randrange(101, 999)
+    display_numbers(target_number, drawn_numbers,True)
     while len(drawn_numbers)>0:
-        next_turn(drawn_numbers, initial_number)
+        results = next_turn(drawn_numbers, target_number)
+        if target_number in results:
+            print ("le compte est bon")
+        ask_to_continue("Voulez vous \"continuer\" ou \"proposer\" un nombre")
 
 
 
-def next_turn(drawn_numbers, initial_number: int):
+def next_turn(drawn_numbers, target_number: int):
     """
     Enclenche un tour de jeu, on demande à chaque fois l'opérateur ainsi que les deux nombres utilisés dans le calcul.
     Chaque fois qu'un nombre est choisi, on le retire de la liste des nombres disponibles, et on y ajoute le résultat.
     :param drawn_numbers:
-    :param initial_number:
+    :param target_number:
     :return:
     """
-    operator = ask_operator("Choisissez un opérateur  (+,-,* ou /)")
+    operator = ask_operator("Choisissez un opérateur  (+,-,* ou /) : ")
     first_number_result = ask_number("Merci de choisir un premier nombre dans la liste : ", drawn_numbers)
-    display_numbers(initial_number, drawn_numbers)
+    display_numbers(target_number, drawn_numbers)
     second_number_result = ask_number("Merci de choisir le deuxième nombre dans la liste : ", first_number_result[1])
     result = calculate_and_print(first_number_result[0], second_number_result[0], operator)
     second_number_result[1].append(result)
-    display_numbers(initial_number, second_number_result[1])
+    display_numbers(target_number, second_number_result[1])
+    return second_number_result[1]
 
 def ask_number(prompt, drawn_numbers):
     """
@@ -98,7 +117,8 @@ def ask_number(prompt, drawn_numbers):
     while True:
         input_number = input(prompt).strip()
         if input_number.isdigit():
-            if int(input_number) in drawn_numbers:
+            input_number = int(input_number)
+            if input_number in drawn_numbers:
                 drawn_numbers.remove(input_number)
                 return input_number,drawn_numbers
         else:
