@@ -105,6 +105,16 @@ def calculate_multiplication(left_shift,drawn_numbers):
                     calculate_multiplication(i,drawn_numbers)
 
 
+def compute_score(drawn_numbers, target_number,proposition=False):
+    if not proposition:
+        if len(drawn_numbers)>1 :
+            for number in drawn_numbers:
+                proposition = number
+    else:
+        proposition = drawn_numbers
+
+    score = abs(proposition - target_number)
+    return score
 
 def start_game(solve=False):
     """
@@ -117,15 +127,23 @@ def start_game(solve=False):
     target_number = random.randrange(101, 999)
     display_numbers(target_number, drawn_numbers, True)
     if not solve:
-        while len(drawn_numbers)>0:
+        while len(drawn_numbers)>1:
             results = next_turn(drawn_numbers, target_number)
             if target_number in results:
                 print ("le compte est bon")
                 break
             if not ask_to_continue("Voulez vous \"continuer\" ou \"proposer\" un nombre"):
-                proposed_number = ask_number("proposer un nombre de la liste",results)
+                proposed_number, results  = ask_number("proposer un nombre de la liste",results)
+                print(f"votre proposition est {proposed_number}")
+                print("votre score est : " + str(compute_score(proposed_number, target_number,True)))
                 break
+        else:
+
+            print(f"votre proposition est {drawn_numbers}")
+            print("votre score est : " + str(compute_score(drawn_numbers, target_number)))
     else:
+
+
         solve_countdown(drawn_numbers,target_number)
 
 
@@ -158,6 +176,7 @@ def ask_number(prompt, drawn_numbers):
         input_number = input(prompt).strip()
         if input_number.isdigit():
             input_number = int(input_number)
+
             if input_number in drawn_numbers:
                 drawn_numbers.remove(input_number)
                 return input_number,drawn_numbers
@@ -167,4 +186,4 @@ def ask_number(prompt, drawn_numbers):
 
 
 if __name__ == '__main__':
-    start_game(True)
+    start_game(False)
