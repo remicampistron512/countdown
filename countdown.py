@@ -14,7 +14,7 @@ OPERATORS = {
     '*': op.mul,
     '/': op.floordiv,  # floor division
 }
-
+VALID_OPS = ('+','-','/','*')
 
 # ---------------------------------------------------------------------------------------------------------------------#
 # ------------------------------ Fonctions utilitaires ----------------------------------------------------------------#
@@ -44,14 +44,14 @@ def calculate_and_print(a, b, sign):
     :return:
     """
     if sign not in OPERATORS:
-        print(f"Unknown operator: {sign}")
+        print(f"Operateur inconnu: {sign}")
         return False
     try:
         result = OPERATORS[sign](a, b)
         print(f"{a} {sign} {b} = {result}")
         return result
     except ZeroDivisionError:
-        print("Error: division by zero")
+        print("Erreur: division par zéro")
 
 
 def compute_score(drawn_numbers, target_number, proposition=False):
@@ -89,9 +89,8 @@ def ask_number(prompt, drawn_numbers):
         input_number = input(prompt).strip()
         if input_number.isdigit():
             input_number = int(input_number)
-
+            # on enlève le chiffre entré de la liste
             if input_number in drawn_numbers:
-                drawn_numbers.remove(input_number)
                 return input_number, drawn_numbers
         else:
             print("Merci de rentrer un entier positif")
@@ -111,6 +110,25 @@ def ask_operator(prompt):
         else:
             print("Merci de rentrer +,-,* ou /")
 
+def ask_operation(prompt,drawn_numbers):
+    while True:
+        left = ""
+        right =""
+        candidate_op = ""
+        operation = input(prompt)
+        operation = operation.replace(" ","")
+        if any(operators in operation for operators in VALID_OPS) :
+            for operator in VALID_OPS:
+                if operator in operation:
+                    candidate_op = operator
+            left,right = operation.split(candidate_op,1)
+            if int(left) in drawn_numbers and int(right) in drawn_numbers:
+                return int(left),int(right),candidate_op
+            else:
+                print("rentrez un entier de la liste")
+        else:
+            print("rentrez un opérateur valide (*,+,-,/)")
+
 
 def ask_to_continue(prompt):
     while True:
@@ -119,7 +137,7 @@ def ask_to_continue(prompt):
             return True
         elif decision == "proposer" or decision == "p":
             return False
-        print("merci d'entrer un terme valide (proposer | continuer)")
+        print("merci d'entrer un terme valide (proposer | continuer) : ")
 
 
 # ---------------------------------------------------------------------------------------------------------------------#
@@ -138,11 +156,15 @@ def start_game(solve=False):
     target_number = random.randrange(101, 999)
     display_numbers(target_number, drawn_numbers, True)
     if not solve:
+        # Tant que la liste a plus d'un nombre, on continue le jeu
         while len(drawn_numbers) > 1:
             results = next_turn(drawn_numbers, target_number)
+            display_numbers(target_number, drawn_numbers, False)
+            # le nombre cible est dans la liste des nombres trouvés
             if target_number in results:
                 print("le compte est bon")
                 break
+            # après un tour, on demande à l'utilisateur de proposer un nombre ou de continuer
             if not ask_to_continue("Voulez vous \"continuer\" ou \"proposer\" un nombre"):
                 proposed_number, results = ask_number("proposer un nombre de la liste", results)
                 print(f"votre proposition est {proposed_number}")
@@ -164,14 +186,13 @@ def next_turn(drawn_numbers, target_number: int):
     :param target_number:
     :return:
     """
-    operator = ask_operator("Choisissez un opérateur  (+,-,* ou /) : ")
-    first_number_result = ask_number("Merci de choisir un premier nombre dans la liste : ", drawn_numbers)
-    display_numbers(target_number, drawn_numbers)
-    second_number_result = ask_number("Merci de choisir un deuxième nombre dans la liste : ", first_number_result[1])
-    result = calculate_and_print(first_number_result[0], second_number_result[0], operator)
-    second_number_result[1].append(result)
-    display_numbers(target_number, second_number_result[1])
-    return second_number_result[1]
+    first_number,second_number,operator = ask_operation("Rentrer votre calcul : ",drawn_numbers)
+
+    result = calculate_and_print(first_number, second_number, operator)
+    drawn_numbers.remove(first_number)
+    drawn_numbers.remove(second_number)
+    drawn_numbers.append(result)
+    return drawn_numbers
 
 
 # ---------------------------------------------------------------------------------------------------------------------#
