@@ -97,23 +97,16 @@ def ask_number(prompt, drawn_numbers):
         print("Merci de choisir un nombre de la liste")
 
 
-def ask_operator(prompt):
+
+def ask_operation(prompt,drawn_numbers):
     """
-    Demande l'opérateur à l'utilisateur
+    Demande une opération binaire (ex. `25+50') et la découpe.
+
     :param prompt:
+    :param drawn_numbers:
     :return:
     """
     while True:
-        operator = input(prompt)
-        if operator == "+" or operator == "/" or operator == "*" or operator == "-":
-            return operator
-        else:
-            print("Merci de rentrer +,-,* ou /")
-
-def ask_operation(prompt,drawn_numbers):
-    while True:
-        left = ""
-        right =""
         candidate_op = ""
         operation = input(prompt)
         operation = operation.replace(" ","")
@@ -131,6 +124,11 @@ def ask_operation(prompt,drawn_numbers):
 
 
 def ask_to_continue(prompt):
+    """
+    Propose à l'utilisateur de continuer la partie ou bien de proposer un nombre
+    :param prompt:
+    :return:
+    """
     while True:
         decision = input(prompt)
         if decision == "continuer" or decision == "c":
@@ -158,7 +156,7 @@ def start_game(solve=False):
     if not solve:
         # Tant que la liste a plus d'un nombre, on continue le jeu
         while len(drawn_numbers) > 1:
-            results = next_turn(drawn_numbers, target_number)
+            results = next_turn(drawn_numbers)
             display_numbers(target_number, drawn_numbers, False)
             # le nombre cible est dans la liste des nombres trouvés
             if target_number in results:
@@ -178,12 +176,10 @@ def start_game(solve=False):
         solve_countdown(drawn_numbers, target_number)
 
 
-def next_turn(drawn_numbers, target_number: int):
+def next_turn(drawn_numbers):
     """
-    Enclenche un tour de jeu, on demande à chaque fois l'opérateur ainsi que les deux nombres utilisés dans le calcul.
-    Chaque fois qu'un nombre est choisi, on le retire de la liste des nombres disponibles, et on y ajoute le résultat.
+    Exécute un tour : demande une opération, calcule le résultat, met à jour la liste de nombres.
     :param drawn_numbers:
-    :param target_number:
     :return:
     """
     first_number,second_number,operator = ask_operation("Rentrer votre calcul : ",drawn_numbers)
