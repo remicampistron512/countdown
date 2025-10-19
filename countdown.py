@@ -8,6 +8,14 @@ from copy import deepcopy
 # La liste des nombres disponibles
 NUMBERS_POOL = tuple(range(1, 11)) * 2 + (25, 50, 75, 100)
 
+# Un dictionnaire des opérateurs et leur correspondance
+OPERATORS = {
+    '+': op.add,
+    '-': op.sub,
+    '*': op.mul,
+    '/': op.floordiv,  # floor division
+}
+VALID_OPS = ('+', '-', '/', '*')
 
 # ---------------------------------------------------------------------------------------------------------------------#
 # ------------------------------ Fonctions utilitaires ----------------------------------------------------------------#
@@ -190,16 +198,6 @@ def next_turn(drawn_numbers):
 # ---------------------------------------------------------------------------------------------------------------------#
 # ------------------------------ Solveur ------------------------------------------------------------------------------#
 # ---------------------------------------------------------------------------------------------------------------------#
-
-
-# Un dictionnaire des opérateurs et leur correspondance
-OPERATORS = {
-    '+': op.add,
-    '-': op.sub,
-    '*': op.mul,
-    '/': op.floordiv,  # floor division
-}
-VALID_OPS = ('+', '-', '/', '*')
 
 
 def solve_countdown(drawn_numbers, target_number, collect_steps=False):
