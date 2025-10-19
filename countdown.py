@@ -3,18 +3,11 @@
 
 import random
 import operator as op
+from copy import deepcopy
 
 # La liste des nombres disponibles
 NUMBERS_POOL = tuple(range(1, 11)) * 2 + (25, 50, 75, 100)
 
-# Un dictionnaire des opérateurs et leur correspondance
-OPERATORS = {
-    '+': op.add,
-    '-': op.sub,
-    '*': op.mul,
-    '/': op.floordiv,  # floor division
-}
-VALID_OPS = ('+','-','/','*')
 
 # ---------------------------------------------------------------------------------------------------------------------#
 # ------------------------------ Fonctions utilitaires ----------------------------------------------------------------#
@@ -97,8 +90,7 @@ def ask_number(prompt, drawn_numbers):
         print("Merci de choisir un nombre de la liste")
 
 
-
-def ask_operation(prompt,drawn_numbers):
+def ask_operation(prompt, drawn_numbers):
     """
     Demande une opération binaire (ex. `25+50') et la découpe.
 
@@ -109,14 +101,14 @@ def ask_operation(prompt,drawn_numbers):
     while True:
         candidate_op = ""
         operation = input(prompt)
-        operation = operation.replace(" ","")
-        if any(operators in operation for operators in VALID_OPS) :
+        operation = operation.replace(" ", "")
+        if any(operators in operation for operators in VALID_OPS):
             for operator in VALID_OPS:
                 if operator in operation:
                     candidate_op = operator
-            left,right = operation.split(candidate_op,1)
+            left, right = operation.split(candidate_op, 1)
             if int(left) in drawn_numbers and int(right) in drawn_numbers:
-                return int(left),int(right),candidate_op
+                return int(left), int(right), candidate_op
             else:
                 print("rentrez un entier de la liste")
         else:
@@ -173,7 +165,11 @@ def start_game(solve=False):
             print(f"votre proposition est {drawn_numbers}")
             print("votre score est : " + str(compute_score(drawn_numbers, target_number)))
     else:
-        solve_countdown(drawn_numbers, target_number)
+
+        res = solve_countdown(drawn_numbers, target_number, True)
+        print("Le compte est bon !:", res["result"])
+        for s in res["steps"][-15:]:  # print first 15 steps
+            print(f"depth={s['depth']} | {s['expr']} | before={s['before_numbers']} -> after={s['after_numbers']}")
 
 
 def next_turn(drawn_numbers):
@@ -182,7 +178,7 @@ def next_turn(drawn_numbers):
     :param drawn_numbers:
     :return:
     """
-    first_number,second_number,operator = ask_operation("Rentrer votre calcul : ",drawn_numbers)
+    first_number, second_number, operator = ask_operation("Rentrer votre calcul : ", drawn_numbers)
 
     result = calculate_and_print(first_number, second_number, operator)
     drawn_numbers.remove(first_number)
@@ -195,38 +191,231 @@ def next_turn(drawn_numbers):
 # ------------------------------ Solveur ------------------------------------------------------------------------------#
 # ---------------------------------------------------------------------------------------------------------------------#
 
-def solve_countdown(drawn_numbers, target_number):
+
+# Un dictionnaire des opérateurs et leur correspondance
+OPERATORS = {
+    '+': op.add,
+    '-': op.sub,
+    '*': op.mul,
+    '/': op.floordiv,  # floor division
+}
+VALID_OPS = ('+', '-', '/', '*')
+
+
+def solve_countdown(drawn_numbers, target_number, collect_steps=False):
     """
     Solveur du jeu automatique, basé sur dfs(depth first search).
     On enregistre les combinaisons explorées dans un dictionnaire.
 
+    :param collect_steps:
     :param drawn_numbers:
     :param target_number:
     :return:
     """
 
-    # la solution est dans les chiffres proposés
-    if target_number in drawn_numbers:
-        return target_number
-    else:
+    def replace_numbers(left_number_idx, right_number_idx, result, numbers):
+        """
+        Remplace les nombres utilisés dans le calcul précédent
+        :param left_number_idx:
+        :param right_number_idx:
+        :param result:
+        :param numbers:
+        :return:
+        """
+        # vérifications basiques
+        if left_number_idx == right_number_idx:
+            raise ValueError("left_number_idx et right_number_idx doivent être différents")
+
+        if left_number_idx < 0 or left_number_idx >= len(numbers):
+            raise IndexError("left_number_idx out of range")
+        if right_number_idx < 0 or right_number_idx >= len(numbers):
+            raise IndexError("right_number_idx out of range")
+
+        # Créé une nouvelle liste qui enregistre les nombres sauf les indices choisis
+        new_numbers = []
+        i = 0
+        while i < len(numbers):
+            if i != left_number_idx and i != right_number_idx:
+                new_numbers.append(numbers[i])
+            i += 1
+
+        # Ajoute à la liste le résultat de l'opération
+        new_numbers.append(result)
+        return new_numbers
+
+    def is_calculation_legal(right_number, left_number):
+        """
+        Le calcul doit être possible, pas de résultat négatif
+        :param right_number:
+        :param left_number:
+        :return:
+        """
+        return (right_number - left_number) >= 0
+
+    def reorder(numbers):
+        """
+        Créé un tuple d'ordre croissant permettant de comparer avec le résultat précédent
+        :param numbers:
+        :return:
+        """
+        return tuple(sorted(numbers))
+
+    # créé un set pour enregistrer les nombres obtenus, cela permet de ne pas recalculer les mêmes combinaisons
+    seen_states = set()
+
+    # enregistre les calculs précédents
+    steps = []
+
+    def track_step(depth_level, operator_used, left_value, right_value, result_value,
+                   numbers_before, numbers_after):
+        """
+        Permet d'enregistrer les différentes étapes qui ont mené au résultat dans un dictionnaire
+        :param depth_level:
+        :param operator_used:
+        :param left_value:
+        :param right_value:
+        :param result_value:
+        :param numbers_before:
+        :param numbers_after:
+        :return:
+        """
+        # On ne désire pas obtenir les calculs
+        if not collect_steps:
+            return
+        # copies pour éviter les alias
+        before_copy = deepcopy(numbers_before)
+        after_copy = deepcopy(numbers_after)
+        steps.append({
+            "depth": depth_level,
+            "operator": operator_used,
+            "left": left_value,
+            "right": right_value,
+            "result": result_value,
+            "before_numbers": before_copy,
+            "after_numbers": after_copy,
+            "expr": f"({left_value} {operator_used} {right_value}) = {result_value}",
+        })
+
+    def calculate(numbers, target, depth=0):
+        """
+
+        :param numbers: la liste des nombres disponibles pour le calcul
+        :param target: le résultat à atteindre
+        :param depth: profondeur du calcul
+        :return:
+        """
+
+        if len(numbers) <= 0:
+            print("toutes les combinaisons ont été explorées")
+            return False
+
+
+
+        # On compare la liste des nombres avec les nombres vus précédemment
+        current_numbers = reorder(numbers)
+        if current_numbers in seen_states:
+            return False
+        seen_states.add(current_numbers)
+
+        # On teste chaque paire (i, j).
+        i = 0
+        while i < len(numbers) - 1:
+            j = i + 1
+            while j < len(numbers):
+                right_number = numbers[i]
+                left_number = numbers[j]
+
+                right_number_idx = i
+                left_number_idx = j
+
+                # ============== ADDITION ==============
+                addition_result = OPERATORS["+"](right_number, left_number)
+                new_numbers = replace_numbers(left_number_idx, right_number_idx, addition_result, numbers)
+                if collect_steps:
+                    track_step(depth, '+', left_number, right_number, addition_result, numbers, new_numbers)
+                if addition_result == target or calculate(new_numbers, target, depth + 1):
+                    return True
+                if collect_steps:
+                    steps.pop()  # retire le résultat enregistré le plus haut dans la pile
+
+                # ============ MULTIPLICATION ===========
+                multiplication_result = OPERATORS["*"](right_number, left_number)
+                new_numbers = replace_numbers(left_number_idx, right_number_idx, multiplication_result, numbers)
+                if collect_steps:
+                    track_step(depth, '*', left_number, right_number, multiplication_result, numbers,
+                               new_numbers)
+                if multiplication_result == target or calculate(new_numbers, target, depth + 1):
+                    return True
+                if collect_steps:
+                    steps.pop()
+                # =============== DIVISION ==============
+                # left / right si exact
+                if right_number != 0 and left_number % right_number == 0:
+                    division_result = OPERATORS["/"](left_number, right_number)
+                    new_numbers = replace_numbers(left_number_idx, right_number_idx, division_result, numbers)
+                    if collect_steps:
+                        track_step(depth, '/', left_number, right_number, division_result, numbers, new_numbers)
+                    if division_result == target or calculate(new_numbers, target, depth + 1):
+                        return True
+                    if collect_steps:
+                        steps.pop()
+
+                # right / left si exact
+                if left_number != 0 and right_number % left_number == 0:
+                    division_result = OPERATORS["/"](right_number, left_number)
+                    new_numbers = replace_numbers(left_number_idx, right_number_idx, division_result, numbers)
+                    if collect_steps:
+                        track_step(depth, '/', right_number, left_number, division_result, numbers, new_numbers)
+                    if division_result == target or calculate(new_numbers, target, depth + 1):
+                        return True
+                    if collect_steps:
+                        steps.pop()
+
+                # ============ SOUSTRACTION =============
+                # right - left (>= 0)
+                if is_calculation_legal(right_number, left_number):
+                    substraction_result = OPERATORS["-"](right_number, left_number)
+                    new_numbers = replace_numbers(left_number_idx, right_number_idx, substraction_result,
+                                                  numbers)
+                    if collect_steps:
+                        track_step(depth, '-', right_number, left_number, substraction_result, numbers,
+                                   new_numbers)
+                    if substraction_result == target or calculate(new_numbers, target, depth + 1):
+                        return True
+                    if collect_steps:
+                        steps.pop()
+
+                # left - right (>= 0)
+                if is_calculation_legal(left_number, right_number):
+                    substraction_result2 = OPERATORS["-"](left_number, right_number)
+                    new_numbers = replace_numbers(left_number_idx, right_number_idx, substraction_result2,
+                                                  numbers)
+                    if collect_steps:
+                        track_step(depth, '-', left_number, right_number, substraction_result2, numbers,
+                                   new_numbers)
+                    if substraction_result2 == target or calculate(new_numbers, target, depth + 1):
+                        return True
+                    if collect_steps:
+                        steps.pop()
+
+                j += 1
+            i += 1
+
         return False
 
+    # la solution est dans les chiffres proposés
+    if target_number in drawn_numbers:
+        if collect_steps:
+            return {"Le compte est bon !": target_number, "steps": steps}
+        return target_number
+    else:
+    # on lance le solveur
+        found = calculate(drawn_numbers, target_number, depth=0)
 
-def calculate(drawn_numbers, expression):
-    for i in range(len(drawn_numbers)):
-        for j in range(len(drawn_numbers)):
-            if j < len(drawn_numbers) - 1:
-                remaining = []
-                for k in range(len(drawn_numbers)):
-                    if k != i and k != j:
-                        remaining.append(drawn_numbers[k])
-                print("remaining ")
-                print(remaining)
-                """print(f"{drawn_numbers[i + left_shift]} x {drawn_numbers[j + 1]} = {drawn_numbers[i] * drawn_numbers[j + 1]}")
-                print(f"{drawn_numbers[i + left_shift]} + {drawn_numbers[j + 1]} = {drawn_numbers[i] + drawn_numbers[j + 1]}")
-                print(f"{drawn_numbers[i + left_shift]} - {drawn_numbers[j + 1]} = {drawn_numbers[i] - drawn_numbers[j + 1]}")
-                print(f"{drawn_numbers[i + left_shift]} / {drawn_numbers[j + 1]} = {drawn_numbers[i] / drawn_numbers[j + 1]}")"""
-                calculate(remaining + [drawn_numbers[i] - drawn_numbers[j]], f"({expression[i]} / {expression[j]})")
+    if collect_steps:
+        return {"result": (target_number if found else None), "steps": (steps if found else [])}
+
+    return target_number if found else None
 
 
 # ---------------------------------------------------------------------------------------------------------------------#
@@ -235,4 +424,4 @@ def calculate(drawn_numbers, expression):
 
 
 if __name__ == '__main__':
-    start_game(False)
+    start_game(True)
