@@ -175,9 +175,14 @@ def start_game(solve=False):
     else:
 
         res = solve_countdown(drawn_numbers, target_number, True)
-        print("Le compte est bon !:", res["result"])
-        for s in res["steps"][-15:]:  # print first 15 steps
-            print(f"{s['expr']}")
+
+        if isinstance(res, dict):
+            print("Le compte est bon !")
+            for s in res["steps"]:
+                print(f"{s['expr']}")
+        elif res[0]:
+            print("Pas de solution trouvée, le plus proche est : ")
+            print (res[0]["résultat"])
 
 
 def next_turn(drawn_numbers):
@@ -210,6 +215,27 @@ def solve_countdown(drawn_numbers, target_number, collect_steps=False):
     :param target_number:
     :return:
     """
+
+    # créé un set pour enregistrer les nombres obtenus, cela permet de ne pas recalculer les mêmes combinaisons
+    seen_states = set()
+
+    # enregistre les calculs précédents
+    steps = []
+
+    score_board = []
+
+    def add_to_score_board(result,target):
+        score = compute_score(result, target, True)
+        entry = {"résultat": result, "score": score}
+
+        # Si vide ou inférieur au dernier le moins elevé
+        if not score_board or score < score_board[0]["score"]:
+            score_board[:] = [entry]
+        return entry
+
+
+
+
 
     def replace_numbers(left_number_idx, right_number_idx, result, numbers):
         """
@@ -258,11 +284,7 @@ def solve_countdown(drawn_numbers, target_number, collect_steps=False):
         """
         return tuple(sorted(numbers))
 
-    # créé un set pour enregistrer les nombres obtenus, cela permet de ne pas recalculer les mêmes combinaisons
-    seen_states = set()
 
-    # enregistre les calculs précédents
-    steps = []
 
     def track_step(depth_level, operator_used, left_value, right_value, result_value,
                    numbers_before, numbers_after):
@@ -328,6 +350,7 @@ def solve_countdown(drawn_numbers, target_number, collect_steps=False):
 
                 # ============== ADDITION ==============
                 addition_result = OPERATORS["+"](right_number, left_number)
+                add_to_score_board(addition_result, target)
                 new_numbers = replace_numbers(left_number_idx, right_number_idx, addition_result, numbers)
                 if collect_steps:
                     track_step(depth, '+', left_number, right_number, addition_result, numbers, new_numbers)
@@ -338,6 +361,7 @@ def solve_countdown(drawn_numbers, target_number, collect_steps=False):
 
                 # ============ MULTIPLICATION ===========
                 multiplication_result = OPERATORS["*"](right_number, left_number)
+                add_to_score_board(multiplication_result, target)
                 new_numbers = replace_numbers(left_number_idx, right_number_idx, multiplication_result, numbers)
                 if collect_steps:
                     track_step(depth, '*', left_number, right_number, multiplication_result, numbers,
@@ -350,6 +374,7 @@ def solve_countdown(drawn_numbers, target_number, collect_steps=False):
                 # left / right si exact
                 if right_number != 0 and left_number % right_number == 0:
                     division_result = OPERATORS["/"](left_number, right_number)
+                    add_to_score_board(division_result, target)
                     new_numbers = replace_numbers(left_number_idx, right_number_idx, division_result, numbers)
                     if collect_steps:
                         track_step(depth, '/', left_number, right_number, division_result, numbers, new_numbers)
@@ -361,6 +386,7 @@ def solve_countdown(drawn_numbers, target_number, collect_steps=False):
                 # right / left si exact
                 if left_number != 0 and right_number % left_number == 0:
                     division_result = OPERATORS["/"](right_number, left_number)
+                    add_to_score_board(division_result, target)
                     new_numbers = replace_numbers(left_number_idx, right_number_idx, division_result, numbers)
                     if collect_steps:
                         track_step(depth, '/', right_number, left_number, division_result, numbers, new_numbers)
@@ -373,6 +399,7 @@ def solve_countdown(drawn_numbers, target_number, collect_steps=False):
                 # right - left (>= 0)
                 if is_calculation_legal(right_number, left_number):
                     substraction_result = OPERATORS["-"](right_number, left_number)
+                    add_to_score_board(substraction_result, target)
                     new_numbers = replace_numbers(left_number_idx, right_number_idx, substraction_result,
                                                   numbers)
                     if collect_steps:
@@ -386,6 +413,7 @@ def solve_countdown(drawn_numbers, target_number, collect_steps=False):
                 # left - right (>= 0)
                 if is_calculation_legal(left_number, right_number):
                     substraction_result2 = OPERATORS["-"](left_number, right_number)
+                    add_to_score_board(substraction_result2, target)
                     new_numbers = replace_numbers(left_number_idx, right_number_idx, substraction_result2,
                                                   numbers)
                     if collect_steps:
@@ -401,6 +429,7 @@ def solve_countdown(drawn_numbers, target_number, collect_steps=False):
 
         return False
 
+
     # la solution est dans les chiffres proposés
     if target_number in drawn_numbers:
         if collect_steps:
@@ -411,9 +440,12 @@ def solve_countdown(drawn_numbers, target_number, collect_steps=False):
         found = calculate(drawn_numbers, target_number, depth=0)
 
     if collect_steps:
-        return {"result": (target_number if found else None), "steps": (steps if found else [])}
+        if found:
+            return {"result": target_number, "steps": steps}
+        else:
+            return score_board
 
-    return target_number if found else None
+    return target_number if found else score_board
 
 
 # ---------------------------------------------------------------------------------------------------------------------#
