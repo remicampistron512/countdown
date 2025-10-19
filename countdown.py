@@ -177,7 +177,7 @@ def start_game(solve=False):
         res = solve_countdown(drawn_numbers, target_number, True)
         print("Le compte est bon !:", res["result"])
         for s in res["steps"][-15:]:  # print first 15 steps
-            print(f"depth={s['depth']} | {s['expr']} | before={s['before_numbers']} -> after={s['after_numbers']}")
+            print(f"{s['expr']}")
 
 
 def next_turn(drawn_numbers):
